@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rezervační systém DOD</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; }
+  label { display: block; margin-top: 10px; }
+  select, input[type="text"] { width: 100%; padding: 8px; margin-top: 5px; }
+  button { margin-top: 15px; padding: 10px 15px; }
+  .status { margin-top: 20px; padding: 10px; border-radius: 5px; }
+  .success { background-color: #d4edda; color: #155724; }
+  .error { background-color: #f8d7da; color: #721c24; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+  th { background-color: #f4f4f4; }
+</style>
+</head>
+<body>
+
+<h1>Rezervační systém - Den otevřených dveří</h1>
+
+<form id="rezervacniForm">
+  <label for="ucitelka">Jméno učitelky:</label>
+  <input type="text" id="ucitelka" required />
+
+  <label for="datum">Vyberte termín:</label>
+  <select id="datum" required>
+    <option value="">-- vyberte termín --</option>
+    <option value="11.11.2025">11.11.2025</option>
+    <option value="3.12.2025">3.12.2025</option>
+    <option value="8.1.2026">8.1.2026</option>
+    <option value="24.1.2026">24.1.2026</option>
+  </select>
+
+  <label for="misto">Vyberte místo:</label>
+  <select id="misto" required>
+    <option value="">-- vyberte místo --</option>
+    <option value="Meziboří">Meziboří (90 min)</option>
+    <option value="Most">Most (60 min)</option>
+  </select>
+
+  <button type="submit">Rezervovat</button>
+</form>
+
+<div id="status" class="status"></div>
+
+<h2>Aktuální rezervace</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Termín</th>
+      <th>Meziboří</th>
+      <th>Most</th>
+    </tr>
+  </thead>
+  <tbody id="rezervaceTabulka">
+    <!-- Dynamické obsazení -->
+  </tbody>
+</table>
+
+<script>
+  const terminy = ["11.11.2025", "3.12.2025", "8.1.2026", "24.1.2026"];
+  const lokality = ["Meziboří", "Most"];
+
+  // Načti rezervace z localStorage nebo vytvoř prázdné
+  let rezervace = JSON.parse(localStorage.getItem("rezervaceDOD")) || {};
+
+  // Inicializuj strukturu rezervací
+  function inicializujRezervace() {
+    for (let d of terminy) {
+      if (!rezervace[d]) {
+        rezervace[d] = { "Meziboří": null, "Most": null };
+      } else {
+        if (!rezervace[d]["Meziboří"]) rezervace[d]["Meziboří"] = null;
+        if (!rezervace[d]["Most"]) rezervace[d]["Most"] = null;
+      }
+    }
+  }
+
+  inicializujRezervace();
+
+  function ulozRezervace() {
+    localStorage.setItem("rezervaceDOD", JSON.stringify(rezervace));
+  }
+
+  function aktualizujTabulku() {
+    const tabulka = document.getElementById("rezervaceTabulka");
+    tabulka.innerHTML = "";
+    for (let d of terminy) {
+      const tr = document.createElement("tr");
+      const tdDatum = document.createElement("td");
+      tdDatum.textContent = d;
+      tr.appendChild(tdDatum);
+
+      for (let misto of lokality) {
+        const td = document.createElement("td");
+        td.textContent = rezervace[d][misto] || "-";
+        tr.appendChild(td);
+      }
+
+      tabulka.appendChild(tr);
+    }
+  }
+
+  document.getElementById("rezervacniForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const ucitelka = document.getElementById("ucitelka").value.trim();
+    const datum = document.getElementById("datum").value;
+    const misto = document.getElementById("misto").value;
+    const statusDiv = document.getElementById("status");
+
+    // Vymaž předchozí stav
+    statusDiv.textContent = "";
+    statusDiv.className = "status";
+
+    if (!ucitelka || !datum || !misto) {
+      statusDiv.textContent = "Vyplňte všechna pole.";
+      statusDiv.classList.add("error");
+      return;
+    }
+
+    if (rezervace[datum][misto]) {
+      statusDiv.textContent = `Tento termín a místo již byly rezervovány (${rezervace[datum][misto]}).`;
+      statusDiv.classList.add("error");
+      return;
+    }
+
+    // Ulož rezervaci
+    rezervace[datum][misto] = ucitelka;
+    ulozRezervace();
+    aktualizujTabulku();
+
+    statusDiv.textContent = "Rezervace byla úspěšně vytvořena.";
+    statusDiv.classList.add("success");
+
+    // Reset formuláře
+    document.getElementById("rezervacniForm").reset();
+  });
+
+  // Načti tabulku při načtení stránky
+  aktualizujTabulku();
+</script>
+
+</body>
+</html>
